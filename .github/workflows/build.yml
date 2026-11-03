@@ -1,0 +1,25 @@
+name: SimpleACPIBattery kext build
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build SimpleACPIBattery.kext (x86_64)
+        run: |
+          set -e
+          bash build.sh "$RUNNER_TEMP/out"
+          cp -R acpi "$RUNNER_TEMP/out/"
+          file "$RUNNER_TEMP/out/SimpleACPIBattery.kext/Contents/MacOS/SimpleACPIBattery"
+          file "$RUNNER_TEMP/out/SimpleACPIBattery.kext/Contents/MacOS/SimpleACPIBattery" | grep -q x86_64
+          # macOS refuses a kext without kmod_info ("kexts must have a _kmod_info symbol") - check it is there
+          nm "$RUNNER_TEMP/out/SimpleACPIBattery.kext/Contents/MacOS/SimpleACPIBattery" | grep -q " _kmod_info$"
+          kmutil print-diagnostics -p "$RUNNER_TEMP/out/SimpleACPIBattery.kext" || true
+          echo "### SimpleACPIBattery.kext built" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleACPIBattery
+          path: ${{ runner.temp }}/out
